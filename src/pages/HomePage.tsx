@@ -63,7 +63,7 @@ const HomePage: React.FC = () => {
       </Header>
       <Content style={{ background: '#F5F5F5', padding: '0 0 40px 0' }}>
         <div style={{ background: 'linear-gradient(90deg, #e3f0ff 0%, #fff 100%)', padding: '48px 0 32px 0', textAlign: 'center' }}>
-          <Title level={2} style={{ color: '#222', fontWeight: 700, marginBottom: 8 }}>找版权图，上包图网</Title> {/* 网站主标题 */}
+          <Title level={2} style={{ color: '#222', fontWeight: 700, marginBottom: 8 }}>My Tools</Title> {/* 网站主标题 */}
           <Text style={{ fontSize: 18, color: '#666' }}>安全高效的文件与图片处理工具集</Text>
           <div style={{ margin: '32px auto 0', maxWidth: 520, display: 'flex', background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #eee', alignItems: 'center', padding: 8 }}>
             <Input.Group compact style={{ flex: 1 }}>
