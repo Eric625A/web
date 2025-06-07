@@ -1,0 +1,36 @@
+body {
+  background: #f5f5f5;
+}
+
+.App {
+  min-height: 100vh;
+  background: #fff;
+}
+
+/* 去除原有logo动画和样式 */
+.App-logo {
+  display: none;
+}
+
+.App-header {
+  display: none;
+}
+
+.App-link {
+  display: none;
+}
+
+/* Ant Design 卡片阴影微调 */
+.ant-card {
+  transition: box-shadow 0.2s;
+}
+.ant-card:hover {
+  box-shadow: 0 4px 16px #e3eaf1;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .ant-card {
+    min-height: 140px;
+  }
+}
