@@ -6,9 +6,12 @@ import {
   FileTextOutlined, 
   ShoppingCartOutlined, 
   InboxOutlined, 
-  SettingOutlined 
+  SettingOutlined,
+  ShoppingOutlined,
+  ShopOutlined,
+  SwapOutlined
 } from '@ant-design/icons';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../App.css';
 
 const { Header, Content, Footer } = Layout;
@@ -60,6 +63,34 @@ const modules = [
 ];
 
 const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleNavigation = (path: string) => {
+    console.log('Navigating to:', path);
+    navigate(path, { replace: true });
+  };
+
+  const tools = [
+    {
+      title: '仓库管理',
+      icon: <ShopOutlined style={{ fontSize: '32px' }} />,
+      description: '管理仓库库存、物料和成品',
+      path: '/warehouse'
+    },
+    {
+      title: '采购管理',
+      icon: <ShoppingOutlined style={{ fontSize: '32px' }} />,
+      description: '管理物料采购和供应商',
+      path: '/purchase'
+    },
+    {
+      title: '版本管理',
+      icon: <SwapOutlined style={{ fontSize: '32px' }} />,
+      description: '管理软件版本和更新',
+      path: '/software'
+    }
+  ];
+
   return (
     <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
       <Header style={{ background: '#fff', borderBottom: '1px solid #f0f0f0', padding: 0 }}>
@@ -138,6 +169,26 @@ const HomePage: React.FC = () => {
               </Col>
             </Row>
           </Card>
+        </div>
+
+        <div style={{ padding: '24px' }}>
+          <Title level={2} style={{ marginBottom: '24px' }}>系统工具</Title>
+          <Row gutter={[16, 16]}>
+            {tools.map((tool, index) => (
+              <Col xs={24} sm={12} md={8} key={index}>
+                <Card 
+                  hoverable 
+                  style={{ height: '100%', cursor: 'pointer' }}
+                  styles={{ body: { textAlign: 'center' } }}
+                  onClick={() => handleNavigation(tool.path)}
+                >
+                  <div style={{ marginBottom: '16px' }}>{tool.icon}</div>
+                  <Title level={4} style={{ margin: '0 0 8px 0' }}>{tool.title}</Title>
+                  <p style={{ color: 'rgba(0, 0, 0, 0.45)' }}>{tool.description}</p>
+                </Card>
+              </Col>
+            ))}
+          </Row>
         </div>
       </Content>
       <Footer style={{ textAlign: 'center', background: '#fff', borderTop: '1px solid #f0f0f0' }}>

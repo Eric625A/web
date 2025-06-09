@@ -30,8 +30,10 @@ import {
   ArrowDownOutlined,
   DeleteOutlined,
   ShoppingCartOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  DownloadOutlined
 } from '@ant-design/icons';
+import * as ExcelJS from 'exceljs';
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -43,8 +45,7 @@ const MATERIAL_TYPES = [
   { value: 'FUC-接口板', label: 'FUC-接口板' },
   { value: 'FUC-灯板', label: 'FUC-灯板' },
   { value: 'FUC-上盖', label: 'FUC-上盖' },
-  { value: 'FUC-底壳', label: 'FUC-底壳' },
-  { value: 'FUC-电源适配器', label: 'FUC-电源适配器' }
+  { value: 'FUC-底壳', label: 'FUC-底壳' }
 ];
 
 // 模拟库存数据
@@ -101,6 +102,17 @@ interface MaterialItem {
   abnormalReason?: string;
 }
 
+interface ShipmentRecord {
+  key: string;
+  sn: string;
+  productName: string;
+  pn: string;
+  mainBoardId: string;
+  shipmentDate: string;
+  operator: string;
+  remark?: string;
+}
+
 const WarehousePage: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -113,6 +125,7 @@ const WarehousePage: React.FC = () => {
   const [abnormalForm] = Form.useForm();
   const [selectedMaterial, setSelectedMaterial] = useState<MaterialItem | null>(null);
   const [inventoryData, setInventoryData] = useState<MaterialItem[]>(initialInventoryData);
+  const [shipmentRecords, setShipmentRecords] = useState<ShipmentRecord[]>([]);
 
   // 计算每种物料的数量统计
   const materialStats = useMemo(() => {
@@ -137,12 +150,29 @@ const WarehousePage: React.FC = () => {
       const values = await form.validateFields();
       console.log('Form values:', values);
 
+      // 检查物料是否存在且数量充足
+      const material = inventoryData.find(item => item.materialId === values.materialId);
+      if (!material) {
+        message.error('物料不存在');
+        return;
+      }
+      if (material.quantity < values.quantity) {
+        message.error('出库数量不能大于库存数量');
+        return;
+      }
+
+      // 计算新的数量
+      const newQuantity = material.quantity - values.quantity;
+      if (newQuantity < 0) {
+        message.error('出库后数量不能为负数');
+        return;
+      }
+
+      // 更新库存数据
       setInventoryData(prevData => {
         return prevData.map(item => {
           if (item.materialId === values.materialId) {
-            const newQuantity = item.quantity - values.quantity;
             const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantity < 10 ? 'warning' : 'normal';
-            
             return {
               ...item,
               quantity: newQuantity,
@@ -160,7 +190,7 @@ const WarehousePage: React.FC = () => {
     } catch (error) {
       console.error('Form validation failed:', error);
     }
-  }, [form]);
+  }, [form, inventoryData]);
 
   // 处理新增物料
   const handleAddMaterial = useCallback(async () => {
@@ -280,63 +310,102 @@ const WarehousePage: React.FC = () => {
         return;
       }
 
+      // 预先计算所有物料的新数量
+      const newQuantities = {
+        mainBoard: mainBoard.quantity - 1,
+        interfaceBoard: interfaceBoard.quantity - 1,
+        lightBoard: lightBoard.quantity - 1,
+        topShell: topShell.quantity - 1,
+        bottomShell: bottomShell.quantity - 1
+      };
+
+      // 检查是否有任何物料数量会变成负数
+      if (newQuantities.mainBoard < 0) {
+        message.error('主板库存不足');
+        return;
+      }
+      if (newQuantities.interfaceBoard < 0) {
+        message.error('接口板库存不足');
+        return;
+      }
+      if (newQuantities.lightBoard < 0) {
+        message.error('灯板库存不足');
+        return;
+      }
+      if (newQuantities.topShell < 0) {
+        message.error('上盖库存不足');
+        return;
+      }
+      if (newQuantities.bottomShell < 0) {
+        message.error('底壳库存不足');
+        return;
+      }
+
       // 更新库存数据
       setInventoryData(prevData => {
-        const newData = prevData.map(item => {
+        return prevData.map(item => {
           if (item.materialId === mainBoard.materialId) {
-            const newQuantity = item.quantity - 1;
-            const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantity < 10 ? 'warning' : 'normal';
+            const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantities.mainBoard < 10 ? 'warning' : 'normal';
             return {
               ...item,
-              quantity: newQuantity,
+              quantity: newQuantities.mainBoard,
               status: newStatus,
               lastUpdate: new Date().toISOString().split('T')[0]
             };
           }
           if (item.materialId === interfaceBoard.materialId) {
-            const newQuantity = item.quantity - 1;
-            const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantity < 10 ? 'warning' : 'normal';
+            const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantities.interfaceBoard < 10 ? 'warning' : 'normal';
             return {
               ...item,
-              quantity: newQuantity,
+              quantity: newQuantities.interfaceBoard,
               status: newStatus,
               lastUpdate: new Date().toISOString().split('T')[0]
             };
           }
           if (item.materialId === lightBoard.materialId) {
-            const newQuantity = item.quantity - 1;
-            const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantity < 10 ? 'warning' : 'normal';
+            const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantities.lightBoard < 10 ? 'warning' : 'normal';
             return {
               ...item,
-              quantity: newQuantity,
+              quantity: newQuantities.lightBoard,
               status: newStatus,
               lastUpdate: new Date().toISOString().split('T')[0]
             };
           }
           if (item.materialId === topShell.materialId) {
-            const newQuantity = item.quantity - 1;
-            const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantity < 10 ? 'warning' : 'normal';
+            const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantities.topShell < 10 ? 'warning' : 'normal';
             return {
               ...item,
-              quantity: newQuantity,
+              quantity: newQuantities.topShell,
               status: newStatus,
               lastUpdate: new Date().toISOString().split('T')[0]
             };
           }
           if (item.materialId === bottomShell.materialId) {
-            const newQuantity = item.quantity - 1;
-            const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantity < 10 ? 'warning' : 'normal';
+            const newStatus: 'normal' | 'warning' | 'abnormal' = newQuantities.bottomShell < 10 ? 'warning' : 'normal';
             return {
               ...item,
-              quantity: newQuantity,
+              quantity: newQuantities.bottomShell,
               status: newStatus,
               lastUpdate: new Date().toISOString().split('T')[0]
             };
           }
           return item;
         });
-        return newData;
       });
+
+      // 添加出货记录
+      const newShipmentRecord: ShipmentRecord = {
+        key: Date.now().toString(),
+        sn: values.sn,
+        productName: values.productName,
+        pn: values.pn,
+        mainBoardId: values.mainBoardId,
+        shipmentDate: values.shipmentDate.format('YYYY-MM-DD'),
+        operator: values.operator,
+        remark: values.remark
+      };
+
+      setShipmentRecords(prevRecords => [...prevRecords, newShipmentRecord]);
 
       message.success('成品出货成功');
       setIsProductOutModalVisible(false);
@@ -345,6 +414,50 @@ const WarehousePage: React.FC = () => {
       console.error('Product out form validation failed:', error);
     }
   }, [inventoryData, productOutForm]);
+
+  // 导出Excel
+  const handleExportExcel = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('成品出库记录');
+
+      // 设置表头
+      worksheet.columns = [
+        { header: '出库单号', key: 'id', width: 15 },
+        { header: '产品名称', key: 'name', width: 15 },
+        { header: '出库数量', key: 'quantity', width: 10 },
+        { header: '出库日期', key: 'date', width: 15 },
+        { header: '操作人', key: 'operator', width: 10 },
+      ];
+
+      // 添加数据
+      shipmentRecords.forEach(record => {
+        worksheet.addRow({
+          id: record.key,
+          name: record.productName,
+          quantity: record.sn,
+          date: record.shipmentDate,
+          operator: record.operator
+        });
+      });
+
+      // 设置表头样式
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+      // 生成Excel文件
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `成品出库记录_${new Date().toLocaleDateString()}.xlsx`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      message.error('导出Excel失败');
+    }
+  };
 
   // 表格列定义
   const columns = [
@@ -512,6 +625,65 @@ const WarehousePage: React.FC = () => {
                   </Col>
                 ))}
               </Row>
+            </Card>
+          </Col>
+
+          {/* 成品出货记录 */}
+          <Col span={24}>
+            <Card 
+              title="成品出货记录"
+              extra={
+                <Button 
+                  type="primary" 
+                  icon={<DownloadOutlined />}
+                  onClick={handleExportExcel}
+                  disabled={shipmentRecords.length === 0}
+                >
+                  导出Excel
+                </Button>
+              }
+            >
+              <Table 
+                columns={[
+                  {
+                    title: 'SN码',
+                    dataIndex: 'sn',
+                    key: 'sn',
+                  },
+                  {
+                    title: '产品名称',
+                    dataIndex: 'productName',
+                    key: 'productName',
+                  },
+                  {
+                    title: 'PN',
+                    dataIndex: 'pn',
+                    key: 'pn',
+                  },
+                  {
+                    title: '主板物料编号',
+                    dataIndex: 'mainBoardId',
+                    key: 'mainBoardId',
+                  },
+                  {
+                    title: '出货日期',
+                    dataIndex: 'shipmentDate',
+                    key: 'shipmentDate',
+                  },
+                  {
+                    title: '操作人',
+                    dataIndex: 'operator',
+                    key: 'operator',
+                  },
+                  {
+                    title: '备注',
+                    dataIndex: 'remark',
+                    key: 'remark',
+                  }
+                ]}
+                dataSource={shipmentRecords}
+                pagination={false}
+              />
             </Card>
           </Col>
         </Row>
@@ -687,7 +859,7 @@ const WarehousePage: React.FC = () => {
             >
               <Select placeholder="请选择主板物料编号">
                 {inventoryData
-                  .filter(item => item.name === 'FUC-主板')
+                  .filter(item => item.name === 'FUC-主板' && item.status !== 'abnormal')
                   .map(item => (
                     <Option key={item.materialId} value={item.materialId}>
                       {item.materialId}
@@ -696,7 +868,7 @@ const WarehousePage: React.FC = () => {
               </Select>
             </Form.Item>
             <Form.Item
-              name="date"
+              name="shipmentDate"
               label="出货日期"
               rules={[{ required: true, message: '请选择出货日期' }]}
             >
